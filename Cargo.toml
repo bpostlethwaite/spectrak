@@ -1,0 +1,17 @@
+[package]
+name = "spectrak"
+version = "0.1.0"
+authors = ["bpostlethwaite <post.ben.here@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+jack = "0.6"
+ringbuf = "0.2.4"
+rustfft = "6.0.0"
+realfft = "2.0.1"
+crossbeam-channel = "0.5"
+iced = {version ="0.3.0", features = ["glow", "glow_canvas", "tokio"]}
+iced_futures = "0.3.0"
+chrono = "0.4.19"
+iced_native = "0.4.0"
+anyhow = "1.0.40"
