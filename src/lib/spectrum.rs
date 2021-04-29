@@ -8,16 +8,21 @@ use iced::{
 #[derive(Default)]
 pub struct State {
     cache: Cache,
+    rfft: Vec<f32>,
 }
 
 impl State {
-    pub fn view(&mut self) -> Element<Message> {
-        let canvas = Canvas::new(Spectrum {
-            state: self,
+    pub fn new() -> State {
+        State {
+            cache: Cache::new(),
             rfft: vec![],
-        })
-        .width(Length::Units(800))
-        .height(Length::Units(400));
+        }
+    }
+
+    pub fn view(&mut self) -> Element<Message> {
+        let canvas = Canvas::new(Spectrum { state: self })
+            .width(Length::Units(800))
+            .height(Length::Units(400));
 
         Container::new(canvas)
             .width(Length::Fill)
@@ -28,14 +33,18 @@ impl State {
             .into()
     }
 
-    pub fn request_redraw(&mut self) {
+    pub fn set_rfft(&mut self, rfft: Vec<f32>) {
+        self.rfft = rfft;
+        self.request_redraw();
+    }
+
+    fn request_redraw(&mut self) {
         self.cache.clear()
     }
 }
 
 pub struct Spectrum<'a> {
     state: &'a mut State,
-    rfft: Vec<f32>,
 }
 
 impl<'a> canvas::Program<Message> for Spectrum<'a> {
@@ -44,12 +53,12 @@ impl<'a> canvas::Program<Message> for Spectrum<'a> {
             let width = frame.width();
             let height = frame.height();
 
-            let ndata = self.rfft.len();
+            let ndata = self.state.rfft.len();
             let pixel_spacing = width / (ndata as f32);
             let mut xn = 0.0;
 
             let curves = Path::new(|p| {
-                for y in self.rfft.iter() {
+                for y in self.state.rfft.iter() {
                     p.line_to(Point {
                         x: xn,
                         y: height - y * height,

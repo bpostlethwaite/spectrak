@@ -1,17 +1,13 @@
 use super::common::Message;
+use super::spectrum;
 use crossbeam_channel;
 use iced;
-use iced::{
-    canvas::{self, Cache, Canvas, Cursor, Geometry, LineCap, LineJoin, Path, Stroke},
-    executor, Application, Clipboard, Color, Command, Container, Element, Length, Point, Rectangle,
-    Subscription,
-};
+use iced::{executor, Application, Clipboard, Command, Element, Subscription};
 use iced_futures::futures;
 use std::hash::{Hash, Hasher};
 
 pub struct Spectrak {
-    rfft: Vec<f32>,
-    spectrum: Cache,
+    spectrum: spectrum::State,
     rx: crossbeam_channel::Receiver<Vec<f32>>,
 }
 
@@ -23,9 +19,8 @@ impl Application for Spectrak {
     fn new(rx: crossbeam_channel::Receiver<Vec<f32>>) -> (Self, Command<Message>) {
         (
             Spectrak {
-                rfft: vec![],
-                spectrum: Default::default(),
                 rx,
+                spectrum: spectrum::State::new(),
             },
             Command::none(),
         )
@@ -37,10 +32,7 @@ impl Application for Spectrak {
 
     fn update(&mut self, message: Message, _clipboard: &mut Clipboard) -> Command<Message> {
         match message {
-            Message::Tick(rfft_data) => {
-                self.rfft = rfft_data;
-                //self.spectrum.clear();
-            }
+            Message::Tick(rfft_data) => self.spectrum.set_rfft(rfft_data),
         }
 
         Command::none()
@@ -54,53 +46,7 @@ impl Application for Spectrak {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let canvas = Canvas::new(self)
-            .width(Length::Units(800))
-            .height(Length::Units(400));
-
-        Container::new(canvas)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .padding(20)
-            .center_x()
-            .center_y()
-            .into()
-    }
-}
-
-impl canvas::Program<Message> for Spectrak {
-    fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
-        let fft = self.spectrum.draw(bounds.size(), |frame| {
-            let width = frame.width();
-            let height = frame.height();
-
-            let ndata = self.rfft.len();
-            let pixel_spacing = width / (ndata as f32);
-            let mut xn = 0.0;
-
-            let curves = Path::new(|p| {
-                for y in self.rfft.iter() {
-                    p.line_to(Point {
-                        x: xn,
-                        y: height - y * height,
-                    });
-                    xn += pixel_spacing;
-                    //print!("{} ", val);
-                }
-            });
-
-            frame.stroke(
-                &curves,
-                Stroke {
-                    color: Color::from_rgb(0.0, 0.0, 139.0),
-                    width: 2.0,
-                    line_cap: LineCap::Round,
-                    line_join: LineJoin::Round,
-                },
-            );
-        });
-
-        vec![fft]
+        self.spectrum.view()
     }
 }
 
