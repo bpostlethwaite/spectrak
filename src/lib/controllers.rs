@@ -1,12 +1,13 @@
 use anyhow::Result;
 use crossbeam_channel;
 use jack::{AsyncClient, AudioIn, AudioOut, Port, PortSpec};
+use num_complex::Complex32;
 use realfft::RealFftPlanner;
 use ringbuf::RingBuffer;
+use std::f32::consts::PI;
 use std::thread;
 use std::time::Duration;
 
-pub const DEFAULT_FFT_SIZE: u32 = 8;
 // const DEFAULT_FREQ_SCALE: i64 = 1; // log10
 // const DEFAULT_MAXFREQ: i64 = 20000;
 // const DEFAULT_MINFREQ: i64 = 20;
@@ -16,6 +17,17 @@ pub const DEFAULT_FFT_SIZE: u32 = 8;
 // const DEFAULT_SHOW_FREQ_LABELS: bool = true;
 // const DEFAULT_RESPONSE_TIME: f64 = 0.025;
 // const DEFAULT_RESPONSE_TIME_INDEX: i32 = 0;
+
+// This is the audio_biffer we are transferring Jack frames into. It must be larger than
+// than the Jack frame. This is asserted.
+
+const AUDIO_BUFF_SIZE: usize = 8192;
+pub const FFT_MAX_SIZE: usize = 8192;
+const FFT_MAX_BUFF_SIZE: usize = 4097;
+
+fn fft_used_buff_size(fft_size: usize) -> usize {
+    return (fft_size / 2) + 1;
+}
 
 fn port_name(port_basename: &str, port_index: i64) -> String {
     return format!("{}_{}", port_basename, port_index);
@@ -92,9 +104,9 @@ impl jack::ProcessHandler for SineProcessor {
         let out2 = self.port_2.as_mut_slice(ps);
 
         for (a, b) in out1.iter_mut().zip(out2.iter_mut()) {
-            let x1 = self.freq_1 * self.time * 2.0 * std::f32::consts::PI;
+            let x1 = self.freq_1 * self.time * 2.0 * PI;
             let y1 = x1.sin();
-            let x2 = self.freq_2 * self.time * 2.0 * std::f32::consts::PI;
+            let x2 = self.freq_2 * self.time * 2.0 * PI;
             let y2 = x2.sin();
             *a = y1 as f32;
             *b = y2 as f32;
@@ -128,7 +140,7 @@ pub struct FFTProc<'a> {
     pub name: &'a str,
     pub port_basename: &'a str,
     pub sample_rate: usize,
-    pub fft_size: usize,
+    fft_size: usize,
     jack_client: AsyncClient<(), FFTProcessor>,
 }
 
@@ -144,8 +156,7 @@ impl<'a> FFTProc<'a> {
         let (client, port_1, port_2) = make_client(name, port_basename, port_spec_1, port_spec_2)?;
 
         let sample_rate = client.sample_rate();
-        let frame_size = client.buffer_size();
-
+        let frame_size = client.buffer_size() as usize;
         let ring_buf_size = fft_size * 10;
         let rb = RingBuffer::<f32>::new(ring_buf_size);
         let (prod, cons) = rb.split();
@@ -153,11 +164,19 @@ impl<'a> FFTProc<'a> {
         let process = FFTProcessor {
             port_1,
             port_2,
-            tmp_buff: Vec::with_capacity(frame_size as usize),
+            tmp_buff: [0.0; AUDIO_BUFF_SIZE],
             ring_buf: prod,
+            frame_size,
         };
 
         let jack_client = client.activate_async((), process)?;
+
+        assert!(
+            frame_size < AUDIO_BUFF_SIZE,
+            "Jack Frame Size {} greater than Audio Buffer Size {}",
+            frame_size,
+            AUDIO_BUFF_SIZE
+        );
 
         let fft_proc = FFTProc {
             name,
@@ -180,19 +199,37 @@ impl<'a> FFTProc<'a> {
         let sleep_millis = Duration::from_millis(5);
         let mut planner = RealFftPlanner::new();
         let fft = planner.plan_fft_forward(self.fft_size);
-        let mut spec_buf = fft.make_output_vec();
-        let mut sig_buf = Vec::with_capacity(self.fft_size);
+
+        let mut spec_buf = [Complex32::new(0.0, 0.0); FFT_MAX_BUFF_SIZE];
+        let mut sig_buf = [0.0; FFT_MAX_SIZE];
         let spec_buf_len = spec_buf.len() as f32;
         let fft_size = self.fft_size;
+        let fft_buff_size = fft_used_buff_size(fft_size);
+
+        // Hanning window for now
+        let mut window: [f32; FFT_MAX_SIZE] = [0.0; FFT_MAX_SIZE];
+        let m = (fft_size - 1) as f32;
+        for i in 0..fft_size {
+            let val = 2.0 * PI * (i as f32) / m;
+            window[i] = 0.5 - 0.5 * val.cos();
+        }
 
         thread::spawn(move || loop {
             while ring_buf.len() < fft_size {
                 thread::sleep(sleep_millis);
             }
-            ring_buf.pop_slice(&mut sig_buf);
-            fft.process(&mut sig_buf, &mut spec_buf).unwrap();
+            ring_buf.pop_slice(&mut sig_buf[0..fft_size]);
+
+            // window
+            for i in 0..fft_size {
+                sig_buf[i] = sig_buf[i] * window[i];
+            }
+
+            fft.process(&mut sig_buf[0..fft_size], &mut spec_buf[0..fft_buff_size])
+                .unwrap();
             let out: Vec<f32> = spec_buf
                 .iter()
+                .take(fft_buff_size)
                 .into_iter()
                 .map(|x| x.norm_sqr().sqrt() / spec_buf_len)
                 .collect();
@@ -205,18 +242,19 @@ impl<'a> FFTProc<'a> {
 struct FFTProcessor {
     port_1: jack::Port<AudioIn>,
     port_2: jack::Port<AudioIn>,
-    tmp_buff: Vec<f32>,
+    tmp_buff: [f32; AUDIO_BUFF_SIZE],
     ring_buf: ringbuf::Producer<f32>,
+    frame_size: usize,
 }
 
 impl jack::ProcessHandler for FFTProcessor {
     fn process(&mut self, _: &jack::Client, ps: &jack::ProcessScope) -> jack::Control {
         let in_a_p = self.port_1.as_slice(ps);
         let in_b_p = self.port_2.as_slice(ps);
-        for i in 0..=1023 {
+        for i in 0..self.frame_size {
             self.tmp_buff[i] = in_a_p[i] + in_b_p[i];
         }
-        self.ring_buf.push_slice(&self.tmp_buff);
+        self.ring_buf.push_slice(&self.tmp_buff[0..self.frame_size]);
         jack::Control::Continue
     }
 }
