@@ -1,4 +1,5 @@
-pub mod app;
+//pub mod app;
 pub mod common;
 pub mod controllers;
-pub mod spectrum;
+pub mod egui_app;
+//pub mod spectrum;

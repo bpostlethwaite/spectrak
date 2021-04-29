@@ -8,6 +8,16 @@ use std::f32::consts::PI;
 use std::thread;
 use std::time::Duration;
 
+// const DEFAULT_FREQ_SCALE: i64 = 1; // log10
+// const DEFAULT_MAXFREQ: i64 = 20000;
+// const DEFAULT_MINFREQ: i64 = 20;
+// const DEFAULT_SPEC_MIN: i64 = -100;
+// const DEFAULT_SPEC_MAX: i64 = -20;
+// const DEFAULT_WEIGHTING: i64 = 1; // A
+// const DEFAULT_SHOW_FREQ_LABELS: bool = true;
+// const DEFAULT_RESPONSE_TIME: f64 = 0.025;
+// const DEFAULT_RESPONSE_TIME_INDEX: i32 = 0;
+
 // This is the audio_biffer we are transferring Jack frames into. It must be larger than
 // than the Jack frame. This is asserted.
 
