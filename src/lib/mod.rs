@@ -2,4 +2,5 @@
 pub mod common;
 pub mod controllers;
 pub mod egui_app;
-//pub mod spectrum;
+pub mod spectrograph;
+pub mod spectrum;

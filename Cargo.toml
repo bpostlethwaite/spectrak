@@ -11,11 +11,12 @@ rustfft = "6.0.0"
 realfft = "2.0.1"
 num-complex = "0.4.0"
 crossbeam-channel = "0.5"
-# iced = {version ="0.3.0", features = ["glow", "glow_canvas", "tokio"]}
-# iced_futures = "0.3.0"
-# iced_native = "0.4.0"
+glium = "*"
+cgmath = "*"
 anyhow = "1.0.40"
-eframe = { git = "https://github.com/emilk/egui", branch = "master" }
+egui = { git = "https://github.com/emilk/egui", branch = "master" }
+egui_glium = { git = "https://github.com/emilk/egui", branch = "master" }
+
 
 [features]
 default = []

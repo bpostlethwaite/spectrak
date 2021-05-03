@@ -58,6 +58,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28b2cd92db5cbd74e8e5028f7e27dd7aa3090e89e4f2a197cc7c8dfb69c7063b"
 
 [[package]]
+name = "approx"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f2a05fd1bd10b2527e20a2cd32d8873d115b8b39fe219ee25f42a8aca6ba278"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "atomic_refcell"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -136,6 +145,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ced0551234e87afee12411d535648dd89d2e7f34c78b753395567aff3d447ff"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "cgmath"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a98d30140e3296250832bbaaff83b27dcd6fa3cc70fb6f1f3e5c9c0023b5317"
+dependencies = [
+ "approx",
+ "num-traits",
 ]
 
 [[package]]
@@ -389,20 +408,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 
 [[package]]
-name = "eframe"
-version = "0.11.0"
-source = "git+https://github.com/emilk/egui?branch=master#6f01577d5f7f31dbabc0c36b7ea8520db4db9140"
-dependencies = [
- "egui",
- "egui_glium",
- "egui_web",
- "epi",
-]
-
-[[package]]
 name = "egui"
 version = "0.11.0"
-source = "git+https://github.com/emilk/egui?branch=master#6f01577d5f7f31dbabc0c36b7ea8520db4db9140"
+source = "git+https://github.com/emilk/egui?branch=master#101eed0d67f5e188e8ea7087f0f5d4ff892a2248"
 dependencies = [
  "epaint",
 ]
@@ -410,7 +418,7 @@ dependencies = [
 [[package]]
 name = "egui_glium"
 version = "0.11.0"
-source = "git+https://github.com/emilk/egui?branch=master#6f01577d5f7f31dbabc0c36b7ea8520db4db9140"
+source = "git+https://github.com/emilk/egui?branch=master#101eed0d67f5e188e8ea7087f0f5d4ff892a2248"
 dependencies = [
  "copypasta",
  "egui",
@@ -420,27 +428,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "egui_web"
-version = "0.11.0"
-source = "git+https://github.com/emilk/egui?branch=master#6f01577d5f7f31dbabc0c36b7ea8520db4db9140"
-dependencies = [
- "egui",
- "epi",
- "js-sys",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
 name = "emath"
 version = "0.11.0"
-source = "git+https://github.com/emilk/egui?branch=master#6f01577d5f7f31dbabc0c36b7ea8520db4db9140"
+source = "git+https://github.com/emilk/egui?branch=master#101eed0d67f5e188e8ea7087f0f5d4ff892a2248"
 
 [[package]]
 name = "epaint"
 version = "0.11.0"
-source = "git+https://github.com/emilk/egui?branch=master#6f01577d5f7f31dbabc0c36b7ea8520db4db9140"
+source = "git+https://github.com/emilk/egui?branch=master#101eed0d67f5e188e8ea7087f0f5d4ff892a2248"
 dependencies = [
  "ahash",
  "atomic_refcell",
@@ -452,7 +447,7 @@ dependencies = [
 [[package]]
 name = "epi"
 version = "0.11.0"
-source = "git+https://github.com/emilk/egui?branch=master#6f01577d5f7f31dbabc0c36b7ea8520db4db9140"
+source = "git+https://github.com/emilk/egui?branch=master#101eed0d67f5e188e8ea7087f0f5d4ff892a2248"
 dependencies = [
  "egui",
 ]
@@ -665,9 +660,9 @@ checksum = "8eaf4bc02d17cbdd7ff4c7438cafcdf7fb9a4613313ad11b4f8fefe7d3fa0130"
 
 [[package]]
 name = "js-sys"
-version = "0.3.46"
+version = "0.3.49"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf3d7383929f7c9c7c2d0fa596f325832df98c3704f2c60553080f7127a58175"
+checksum = "dc15e39392125075f60c95ba416f5381ff6c3a948ff02ab12464715adf56c821"
 dependencies = [
  "wasm-bindgen",
 ]
@@ -1269,8 +1264,11 @@ name = "spectrak"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cgmath",
  "crossbeam-channel",
- "eframe",
+ "egui",
+ "egui_glium",
+ "glium",
  "jack",
  "num-complex",
  "realfft",
@@ -1377,15 +1375,15 @@ dependencies = [
 
 [[package]]
 name = "wasi"
-version = "0.10.0+wasi-snapshot-preview1"
+version = "0.10.2+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a143597ca7c7793eff794def352d41792a93c481eb1042423ff7ff72ba2c31f"
+checksum = "fd6fbd9a79829dd1ad0cc20627bf1ed606756a7f77edff7b66b7064f9cb327c6"
 
 [[package]]
 name = "wasm-bindgen"
-version = "0.2.69"
+version = "0.2.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cd364751395ca0f68cafb17666eee36b63077fb5ecd972bbcd74c90c4bf736e"
+checksum = "8fe8f61dba8e5d645a4d8132dc7a0a66861ed5e1045d2c0ed940fab33bac0fbe"
 dependencies = [
  "cfg-if 1.0.0",
  "wasm-bindgen-macro",
@@ -1393,9 +1391,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-backend"
-version = "0.2.69"
+version = "0.2.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1114f89ab1f4106e5b55e688b828c0ab0ea593a1ea7c094b141b14cbaaec2d62"
+checksum = "046ceba58ff062da072c7cb4ba5b22a37f00a302483f7e2a6cdc18fedbdc1fd3"
 dependencies = [
  "bumpalo",
  "lazy_static",
@@ -1407,22 +1405,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "wasm-bindgen-futures"
-version = "0.4.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fe9756085a84584ee9457a002b7cdfe0bfff169f45d2591d8be1345a6780e35"
-dependencies = [
- "cfg-if 1.0.0",
- "js-sys",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
 name = "wasm-bindgen-macro"
-version = "0.2.69"
+version = "0.2.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a6ac8995ead1f084a8dea1e65f194d0973800c7f571f6edd70adf06ecf77084"
+checksum = "0ef9aa01d36cda046f797c57959ff5f3c615c9cc63997a8d545831ec7976819b"
 dependencies = [
  "quote",
  "wasm-bindgen-macro-support",
@@ -1430,9 +1416,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro-support"
-version = "0.2.69"
+version = "0.2.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5a48c72f299d80557c7c62e37e7225369ecc0c963964059509fbafe917c7549"
+checksum = "96eb45c1b2ee33545a813a92dbb53856418bf7eb54ab34f7f7ff1448a5b3735d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1443,9 +1429,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-shared"
-version = "0.2.69"
+version = "0.2.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e7811dd7f9398f14cc76efd356f98f03aa30419dea46aa810d71e819fc97158"
+checksum = "b7148f4696fb4960a346eaa60bbfb42a1ac4ebba21f750f75fc1375b098d5ffa"
 
 [[package]]
 name = "wayland-client"
@@ -1532,9 +1518,9 @@ dependencies = [
 
 [[package]]
 name = "web-sys"
-version = "0.3.46"
+version = "0.3.49"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "222b1ef9334f92a21d3fb53dc3fd80f30836959a90f9274a626d7e06315ba3c3"
+checksum = "59fe19d70f5dacc03f6e46777213facae5ac3801575d56ca6cbd4c93dcd12310"
 dependencies = [
  "js-sys",
  "wasm-bindgen",

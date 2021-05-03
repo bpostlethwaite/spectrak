@@ -1,84 +1,38 @@
-use super::common::Message;
-use iced;
-use iced::{
-    canvas::{self, Cache, Canvas, Cursor, Geometry, LineCap, LineJoin, Path, Stroke},
-    Color, Container, Element, Length, Point, Rectangle,
-};
+use egui::widgets::plot::{Curve, Plot};
 
-#[derive(Default)]
-pub struct State {
-    cache: Cache,
-    rfft: Vec<f32>,
+#[derive(PartialEq)]
+pub struct Spectrum {
+    pub rfft: Vec<f32>,
 }
 
-impl State {
-    pub fn new() -> State {
-        State {
-            cache: Cache::new(),
-            rfft: vec![],
-        }
-    }
-
-    pub fn view(&mut self) -> Element<Message> {
-        let canvas = Canvas::new(Spectrum { state: self })
-            .width(Length::Units(800))
-            .height(Length::Units(400));
-
-        Container::new(canvas)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .padding(20)
-            .center_x()
-            .center_y()
-            .into()
-    }
-
-    pub fn set_rfft(&mut self, rfft: Vec<f32>) {
-        self.rfft = rfft;
-        self.request_redraw();
-    }
-
-    fn request_redraw(&mut self) {
-        self.cache.clear()
+impl Default for Spectrum {
+    fn default() -> Self {
+        Self { rfft: vec![] }
     }
 }
 
-pub struct Spectrum<'a> {
-    state: &'a mut State,
-}
+impl Spectrum {
+    // fn options_ui(&mut self, ui: &mut Ui) {
+    //     let Self { proportional, .. } = self;
 
-impl<'a> canvas::Program<Message> for Spectrum<'a> {
-    fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
-        let fft = self.state.cache.draw(bounds.size(), |frame| {
-            let width = frame.width();
-            let height = frame.height();
+    //     ui.horizontal(|ui| {
+    //         ui.checkbox(proportional, "proportional data axes");
+    //     });
+    // }
 
-            let ndata = self.state.rfft.len();
-            let pixel_spacing = width / (ndata as f32);
-            let mut xn = 0.0;
+    fn sin(&self) -> Curve {
+        Curve::from_ys_f32(&self.rfft)
+            .color(egui::Color32::from_rgb(200, 100, 100))
+            .name("0.5 * sin(2x) * sin(t)")
+    }
 
-            let curves = Path::new(|p| {
-                for y in self.state.rfft.iter() {
-                    p.line_to(Point {
-                        x: xn,
-                        y: height - y * height,
-                    });
-                    xn += pixel_spacing;
-                    //print!("{} ", val);
-                }
-            });
+    pub fn ui(&mut self, ui: &mut egui::Ui) {
+        // self.options_ui(ui);
 
-            frame.stroke(
-                &curves,
-                Stroke {
-                    color: Color::from_rgb(0.0, 0.0, 139.0),
-                    width: 2.0,
-                    line_cap: LineCap::Round,
-                    line_join: LineJoin::Round,
-                },
-            );
-        });
-
-        vec![fft]
+        let plot = Plot::new("Demo Plot")
+            .curve(self.sin())
+            .min_size(egui::Vec2::new(5000., 1.0))
+            .data_aspect(self.rfft.len() as f32);
+        ui.add(plot);
     }
 }

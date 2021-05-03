@@ -1,24 +1,18 @@
-use eframe::egui::plot::{Curve, Plot};
-use eframe::egui::*;
-use eframe::{egui, epi};
+use super::spectrum::Spectrum;
 
-pub struct TemplateApp {
+pub struct App {
     // Example stuff:
     pub label: String,
     pub value: f32,
-    pub plot: PlotDemo,
+    pub plot: Spectrum,
     pub rx: crossbeam_channel::Receiver<Vec<f32>>,
 }
 
-impl epi::App for TemplateApp {
-    fn name(&self) -> &str {
-        "egui template"
-    }
-
+impl App {
     /// Called ea4ch time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
-    fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        let TemplateApp {
+    pub fn update(&mut self, ctx: &egui::CtxRef) {
+        let App {
             label,
             value,
             plot,
@@ -29,11 +23,6 @@ impl epi::App for TemplateApp {
             plot.rfft = data;
             //ui.ctx().request_repaint();
         }
-
-        // Examples of how to create different panels and windows.
-        // Pick whichever suits you.
-        // Tip: a good default choice is to just keep the `CentralPanel`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
 
         egui::SidePanel::left("side_panel", 200.0).show(ctx, |ui| {
             ui.heading("Side Panel");
@@ -60,7 +49,8 @@ impl epi::App for TemplateApp {
             egui::menu::bar(ui, |ui| {
                 egui::menu::menu(ui, "File", |ui| {
                     if ui.button("Quit").clicked() {
-                        frame.quit();
+                        // TODO quit
+                        //frame.quit();
                     }
                 });
             });
@@ -90,44 +80,5 @@ impl epi::App for TemplateApp {
                 ui.label("You would normally chose either panels OR windows.");
             });
         }
-    }
-}
-
-// ----------------------------------------------------------------------------
-
-#[derive(PartialEq)]
-pub struct PlotDemo {
-    rfft: Vec<f32>,
-}
-
-impl Default for PlotDemo {
-    fn default() -> Self {
-        Self { rfft: vec![] }
-    }
-}
-
-impl PlotDemo {
-    // fn options_ui(&mut self, ui: &mut Ui) {
-    //     let Self { proportional, .. } = self;
-
-    //     ui.horizontal(|ui| {
-    //         ui.checkbox(proportional, "proportional data axes");
-    //     });
-    // }
-
-    fn sin(&self) -> Curve {
-        Curve::from_ys_f32(&self.rfft)
-            .color(Color32::from_rgb(200, 100, 100))
-            .name("0.5 * sin(2x) * sin(t)")
-    }
-
-    fn ui(&mut self, ui: &mut Ui) {
-        // self.options_ui(ui);
-
-        let plot = Plot::new("Demo Plot")
-            .curve(self.sin())
-            .min_size(Vec2::new(5000., 1.0))
-            .data_aspect(self.rfft.len() as f32);
-        ui.add(plot);
     }
 }
