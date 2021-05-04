@@ -197,10 +197,14 @@ impl Spectrograph {
     }
 
     pub fn set_vertex_position(&mut self, place_rect: egui::Rect, screen_rect: egui::Rect) {
+        // Vertex positions start in bottom left hand corner (-1, -1)
+        // We translate the relative percentage placement positions of place_rect and screen_rect
+        // into Vertex space (-1 -> 1) by taking the ratio (0->1) and multiplying by 2 and adding
+        // to the base coordinate (-1, -1)
         let left = -1.0 + place_rect.min.x / screen_rect.max.x * 2.0;
         let right = -1.0 + place_rect.max.x / screen_rect.max.x * 2.0;
-        let top = -1.0 + place_rect.min.y / screen_rect.max.y * 2.0;
-        let bottom = -1.0 + place_rect.max.y / screen_rect.max.y * 2.0;
+        let top = -1.0 + (screen_rect.max.y - place_rect.min.y) / screen_rect.max.y * 2.0;
+        let bottom = -1.0 + (screen_rect.max.y - place_rect.max.y) / screen_rect.max.y * 2.0;
         self.vertex_position = egui::Rect {
             min: egui::Pos2 { x: left, y: top },
             max: egui::Pos2 {
@@ -208,10 +212,10 @@ impl Spectrograph {
                 y: bottom,
             },
         };
-        println!("{} {} {} {}", left, right, top, bottom);
-        println!("screen rect = {:?}", screen_rect);
-        println!("place rect = {:?}", place_rect);
-        println!("vertex position = {:?}", self.vertex_position);
+        // println!("{} {} {} {}", left, right, top, bottom);
+        // println!("screen rect = {:?}", screen_rect);
+        // println!("place rect = {:?}", place_rect);
+        // println!("vertex position = {:?}", self.vertex_position);
     }
 
     pub fn draw(&mut self, target: &mut glium::Frame) {

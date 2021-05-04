@@ -1,7 +1,5 @@
 use egui::widgets::plot::{Curve, Plot};
 
-use super::common::APP_HEIGHT;
-
 #[derive(PartialEq)]
 pub struct Spectrum {}
 
@@ -26,7 +24,7 @@ impl Spectrum {
             .name("0.5 * sin(2x) * sin(t)")
     }
 
-    pub fn ui(&mut self, ui: &mut egui::Ui, data: &Vec<f32>) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, height: f32, data: &Vec<f32>) {
         // self.options_ui(ui);
 
         let plot = Plot::new("Demo Plot")
@@ -34,7 +32,7 @@ impl Spectrum {
             .allow_drag(false)
             .include_y(1.0)
             .include_y(0.0)
-            .height(APP_HEIGHT * 0.3);
+            .height(height);
         ui.add(plot);
     }
 }

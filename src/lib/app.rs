@@ -72,14 +72,18 @@ impl App {
         let app_rect = ctx.available_rect();
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
-                egui::Frame::dark_canvas(ui.style()).show(ui, |ui| {
-                    plot.ui(ui, &data);
+            egui::Frame::dark_canvas(ui.style()).show(ui, |ui| {
+                let avail_size = ui.available_size();
 
-                    ui.separator();
-                    let place_rect = ui.available_rect_before_wrap_finite();
-                    spectrograph.set_vertex_position(place_rect, app_rect);
+                let plot_height = avail_size.y * 0.3;
+                let spec_height = avail_size.y * 0.7;
+                let (_, place_rect) = ui.allocate_space(egui::Vec2 {
+                    x: avail_size.x,
+                    y: spec_height,
                 });
+                plot.ui(ui, plot_height, &data);
+
+                spectrograph.set_vertex_position(place_rect, app_rect);
             });
         });
 
