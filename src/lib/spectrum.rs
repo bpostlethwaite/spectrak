@@ -1,13 +1,13 @@
 use egui::widgets::plot::{Curve, Plot};
 
+use super::common::APP_HEIGHT;
+
 #[derive(PartialEq)]
-pub struct Spectrum {
-    pub rfft: Vec<f32>,
-}
+pub struct Spectrum {}
 
 impl Default for Spectrum {
     fn default() -> Self {
-        Self { rfft: vec![] }
+        Self {}
     }
 }
 
@@ -20,19 +20,21 @@ impl Spectrum {
     //     });
     // }
 
-    fn sin(&self) -> Curve {
-        Curve::from_ys_f32(&self.rfft)
+    fn sin(&self, data: &Vec<f32>) -> Curve {
+        Curve::from_ys_f32(&data)
             .color(egui::Color32::from_rgb(200, 100, 100))
             .name("0.5 * sin(2x) * sin(t)")
     }
 
-    pub fn ui(&mut self, ui: &mut egui::Ui) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, data: &Vec<f32>) {
         // self.options_ui(ui);
 
         let plot = Plot::new("Demo Plot")
-            .curve(self.sin())
-            .min_size(egui::Vec2::new(5000., 1.0))
-            .data_aspect(self.rfft.len() as f32);
+            .curve(self.sin(data))
+            .allow_drag(false)
+            .include_y(1.0)
+            .include_y(0.0)
+            .height(APP_HEIGHT * 0.3);
         ui.add(plot);
     }
 }

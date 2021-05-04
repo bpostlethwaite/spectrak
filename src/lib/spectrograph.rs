@@ -3,25 +3,11 @@ use std::borrow::Cow;
 
 fn make_image_vec(dimx: u32, dimy: u32) -> Vec<f32> {
     let mut data = vec![];
-    for _i in 0..dimx {
-        for _j in 0..dimy {
-            data.push(0.5);
-        }
+    for _i in 0..dimx * dimy {
+        data.push(0.3);
     }
 
     data
-}
-
-fn make_row(dimy: u32, val: f32) -> Vec<f32> {
-    let mut data = vec![];
-    for _i in 0..dimy {
-        data.push(val);
-    }
-    data
-}
-
-fn make_gradient_row(xn: u32, offset: f32) -> Vec<f32> {
-    make_row(xn, offset)
 }
 
 #[derive(Clone, Copy)]
@@ -43,7 +29,6 @@ const VERTEX_SHADER: &'static str = r#"
     in vec2 position;
 
     // Uniform parameters passed in from the frame.draw() call.
-    uniform mat4 projection;
     uniform float offset;
 
     // Output texture coordinates that gets passed into the fragment shader.
@@ -58,16 +43,16 @@ const VERTEX_SHADER: &'static str = r#"
         // rectangle being drawn. 16 % 4 == 0 which correctly returns the first index.
 
         if (gl_VertexID % 4 == 0) { // First vertex
-            v_tex_coords = vec2(0.0, 1.0 - offset);
+            v_tex_coords = vec2(0.0, 1.0 + offset);
         } else if (gl_VertexID % 4 == 1) { // Second vertex
-            v_tex_coords = vec2(1.0, 1.0 - offset);
+            v_tex_coords = vec2(1.0, 1.0 + offset);
         } else if (gl_VertexID % 4 == 2) { // Third vertex
-            v_tex_coords = vec2(0.0, 0.0 - offset);
+            v_tex_coords = vec2(0.0, 0.0 + offset);
         } else { // Fourth vertex
-            v_tex_coords = vec2(1.0, 0.0 - offset);
+            v_tex_coords = vec2(1.0, 0.0 + offset);
         }
 
-        gl_Position = projection * vec4(position, 0.0, 1.0);
+        gl_Position = vec4(position, 0.0, 1.0);
     }
 "#;
 
@@ -97,21 +82,28 @@ const SCREEN_WIDTH: u32 = 1024;
 const SCREEN_HEIGHT: u32 = 768;
 
 pub struct Spectrograph {
+    offset: f32,
     offset_idx: u32,
     width: u32,
     height: u32,
+    tex_width: u32,
+    tex_height: u32,
     data_texture: glium::texture::texture2d::Texture2d,
     color_texture: glium::texture::srgb_texture1d::SrgbTexture1d,
-    rect_position: Vector2<f32>,
-    rect_size: Vector2<f32>,
+    vertex_position: egui::Rect,
     rect_vertices: glium::VertexBuffer<Vertex>,
     rect_indices: glium::IndexBuffer<u16>,
     rect_program: glium::Program,
-    perspective: [[f32; 4]; 4],
 }
 
 impl Spectrograph {
-    pub fn new(display: &glium::Display, width: u32, height: u32) -> Spectrograph {
+    pub fn new(
+        display: &glium::Display,
+        width: u32,
+        height: u32,
+        tex_width: u32,
+        tex_height: u32,
+    ) -> Spectrograph {
         let mut black_to_green = vec![
             1., 2., 3., 1., 65., 34., 1., 129., 65., 0., 192., 96., 0., 255., 127.,
         ];
@@ -120,7 +112,7 @@ impl Spectrograph {
         let mipmap = glium::texture::MipmapsOption::NoMipmap;
         let format = glium::texture::UncompressedFloatFormat::F32;
         let data_texture = glium::texture::texture2d::Texture2d::empty_with_format(
-            display, format, mipmap, width, height,
+            display, format, mipmap, tex_width, tex_height,
         )
         .unwrap();
 
@@ -128,12 +120,12 @@ impl Spectrograph {
         let color_texture =
             glium::texture::srgb_texture1d::SrgbTexture1d::new(display, color_image).unwrap();
 
-        let image_vec = make_image_vec(width, height);
+        let image_vec = make_image_vec(tex_width, tex_height);
 
         let data_image = glium::texture::RawImage2d {
             data: Cow::from(&image_vec),
-            width,
-            height,
+            width: tex_width,
+            height: tex_height,
             format: glium::texture::ClientFormat::F32,
         };
 
@@ -141,8 +133,8 @@ impl Spectrograph {
             glium::Rect {
                 left: 0,
                 bottom: 0,
-                width,
-                height,
+                width: tex_width,
+                height: tex_height,
             },
             data_image,
         );
@@ -163,62 +155,66 @@ impl Spectrograph {
         let rect_program =
             glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
-        let perspective = {
-            let matrix: Matrix4<f32> = cgmath::ortho(
-                0.0,
-                SCREEN_WIDTH as f32,
-                SCREEN_HEIGHT as f32,
-                0.0,
-                -1.0,
-                1.0,
-            );
-            Into::<[[f32; 4]; 4]>::into(matrix)
-        };
-
-        let rect_size = Vector2 {
-            x: width as f32,
-            y: height as f32,
-        };
-
-        let rect_position = Vector2 {
-            x: (SCREEN_WIDTH / 2) as f32,
-            y: (SCREEN_HEIGHT / 2) as f32,
+        let vertex_position = egui::Rect {
+            min: egui::Pos2 { x: -1.0, y: -1.0 },
+            max: egui::Pos2 { x: 1.0, y: 1.0 },
         };
 
         Spectrograph {
+            offset: 0.0,
             offset_idx: 0,
-            width: 300,
-            height: 600,
+            width,
+            height,
             data_texture,
             color_texture,
-            rect_position,
-            rect_size,
             rect_program,
             rect_vertices,
             rect_indices,
-            perspective,
+            vertex_position,
+            tex_width,
+            tex_height,
         }
     }
 
-    pub fn draw(&mut self, target: &mut glium::Frame) {
-        let offset = ((self.offset_idx + 1) as f32) / (self.height as f32);
-        let row = make_gradient_row(self.width, offset);
-
+    pub fn update(&mut self, data: Vec<f32>) {
+        self.offset = ((self.offset_idx + 1) as f32) / (self.height as f32);
         self.data_texture.write(
             glium::Rect {
                 left: 0,
-                bottom: self.height - (self.offset_idx + 1),
-                width: self.width,
+                bottom: self.offset_idx,
+                width: self.tex_width,
                 height: 1,
             },
             glium::texture::RawImage2d {
-                data: Cow::from(&row),
-                width: self.width,
+                data: Cow::from(data),
+                width: self.tex_width,
                 height: 1,
                 format: glium::texture::ClientFormat::F32,
             },
         );
 
+        self.offset_idx = (self.offset_idx + 1) % self.height;
+    }
+
+    pub fn set_vertex_position(&mut self, place_rect: egui::Rect, screen_rect: egui::Rect) {
+        let left = -1.0 + place_rect.min.x / screen_rect.max.x * 2.0;
+        let right = -1.0 + place_rect.max.x / screen_rect.max.x * 2.0;
+        let top = -1.0 + place_rect.min.y / screen_rect.max.y * 2.0;
+        let bottom = -1.0 + place_rect.max.y / screen_rect.max.y * 2.0;
+        self.vertex_position = egui::Rect {
+            min: egui::Pos2 { x: left, y: top },
+            max: egui::Pos2 {
+                x: right,
+                y: bottom,
+            },
+        };
+        println!("{} {} {} {}", left, right, top, bottom);
+        println!("screen rect = {:?}", screen_rect);
+        println!("place rect = {:?}", place_rect);
+        println!("vertex position = {:?}", self.vertex_position);
+    }
+
+    pub fn draw(&mut self, target: &mut glium::Frame) {
         let uniforms = uniform! {
             data_tex: glium::uniforms::Sampler::new(&self.data_texture)
                 .magnify_filter(glium::uniforms::MagnifySamplerFilter::Nearest)
@@ -226,16 +222,15 @@ impl Spectrograph {
             color_tex: glium::uniforms::Sampler::new(&self.color_texture)
                 .magnify_filter(glium::uniforms::MagnifySamplerFilter::Linear)
                 .wrap_function(glium::uniforms::SamplerWrapFunction::Clamp),
+            offset: self.offset,
 
-            projection: self.perspective,
-            offset: offset,
         };
 
         {
-            let left = self.rect_position.x - self.rect_size.x / 2.0;
-            let right = self.rect_position.x + self.rect_size.x / 2.0;
-            let bottom = self.rect_position.y + self.rect_size.y / 2.0;
-            let top = self.rect_position.y - self.rect_size.y / 2.0;
+            let left = self.vertex_position.min.x;
+            let right = self.vertex_position.max.x;
+            let bottom = self.vertex_position.max.y;
+            let top = self.vertex_position.min.y;
             let vb_data = vec![
                 Vertex {
                     position: [left, top],
@@ -252,8 +247,6 @@ impl Spectrograph {
             ];
             self.rect_vertices.write(&vb_data);
         }
-
-        self.offset_idx = (self.offset_idx + 1) % self.height;
 
         {
             use glium::Surface as _;

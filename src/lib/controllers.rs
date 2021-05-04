@@ -1,3 +1,4 @@
+use super::common::*;
 use anyhow::Result;
 use crossbeam_channel;
 use jack::{AsyncClient, AudioIn, AudioOut, Port, PortSpec};
@@ -7,7 +8,6 @@ use ringbuf::RingBuffer;
 use std::f32::consts::PI;
 use std::thread;
 use std::time::Duration;
-
 // const DEFAULT_FREQ_SCALE: i64 = 1; // log10
 // const DEFAULT_MAXFREQ: i64 = 20000;
 // const DEFAULT_MINFREQ: i64 = 20;
@@ -20,10 +20,6 @@ use std::time::Duration;
 
 // This is the audio_biffer we are transferring Jack frames into. It must be larger than
 // than the Jack frame. This is asserted.
-
-const AUDIO_BUFF_SIZE: usize = 8192;
-pub const FFT_MAX_SIZE: usize = 8192;
-const FFT_MAX_BUFF_SIZE: usize = 4097;
 
 fn fft_used_buff_size(fft_size: usize) -> usize {
     return (fft_size / 2) + 1;
